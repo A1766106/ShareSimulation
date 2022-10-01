@@ -1,13 +1,18 @@
 #include "Console.h"
 #include <iostream>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string>
+#include <fstream>
+#include <sstream>
+#include <chrono>
+#include <thread>
 
 using namespace std;
 
 Console::Console()
 {
-    Logged_In_Status = 0;
+    Logged_In_Status = 1;
     Welcome_Message();
 }
 
@@ -25,7 +30,17 @@ void Console::Welcome_Message()
     cout << "| |              | || |              | || |              | || |              | || |              | || |              | || |              | |  " << endl;
     cout << "| '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |  " << endl;
     cout << " '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'   " << endl << endl; // Output welcome message
-
+    this_thread::sleep_for(chrono::seconds(2));
+    system("Clear"); // Clears terminal
+    cout << "Loading." << endl;
+    this_thread::sleep_for(chrono::seconds(1));
+    system("Clear"); // Clears terminal
+    cout << "Loading.." << endl;
+    this_thread::sleep_for(chrono::seconds(1));
+    system("Clear"); // Clears terminal
+    cout << "Loading..." << endl;
+    this_thread::sleep_for(chrono::seconds(1));
+    system("Clear"); // Clears terminal
     string Confirmation = ""; // Initialises confirmation
     cout << "Do you already have an account? (Y/N) "; // Requests input from user clarrifying if user has an existing account
     cin >> Confirmation;
@@ -50,14 +65,96 @@ int Console::Get_Existing_User()
     return Existing_User;
 }
 
-void Console::Login()
+int Console::Login()
 {
+    string Given_ID;
+    string Given_Password;
+    cout << "Please provide your ID: ";
+    cin >> Given_ID;
+    cout << "Please provide your Password: ";
+    cin >> Given_Password;
+    ifstream AccountsList;
+    AccountsList.open("Accounts.csv");
+    if(!AccountsList.is_open()){
+        cout << "File Failed To Open" << endl;
+        Log_Out();
+    }
+    string Temp_ID;
+    string Temp_Password;
+    string Line;
+    while(getline(AccountsList, Line))
+    {
+        stringstream ss(Line);
+        getline(ss, Temp_ID, ',');
+        getline(ss, Temp_Password, ',');
+        if(Temp_ID == Given_ID && Temp_Password == Given_Password)
+        {
+            AccountsList.close();
+            return stoi(Given_ID);
+        }
+    }
+    AccountsList.close();
+    Log_Out();
+    return -1;
 
 }
 
-void Console::Create_Account()
+int Console::Create_Account()
 {
-
+    string Account_Type;
+    int Account_Number;
+    system("Clear");
+    cout << "What type of user are you? Broker or Investor (B/I): ";
+    cin >> Account_Type;
+    while (Account_Type != "B" && Account_Type != "b" && Account_Type != "I" && Account_Type != "i")
+    {
+        cout << "You Entered an invalid input! Please Try Again!" << endl;
+        cout << "What type of user are you? Broker or Investor (B/I): ";
+        cin >> Account_Type;
+    }
+    if(Account_Type == "B" || Account_Type == "b")
+    {
+        Account_Number = Create_Broker();
+    }
+    else
+    {
+        string Investor_Type;
+        system("Clear");
+        cout << "Please select the number associated with the entity type you are: " << endl;
+        cout << "1 - Individual" << endl;
+        cout << "2 - Partnership" << endl;
+        cout << "3 - Trust" << endl;
+        cout << "4 - Company" << endl;
+        cin >> Investor_Type;
+        while(Investor_Type != "1" && Investor_Type != "2" && Investor_Type != "3" && Investor_Type != "4")
+        {
+            system("Clear");
+            cout << "You selected an option that wasnt in the avaliable options! Please try again! " << endl;
+            cout << "Please select the number associated with the entity type you are: " << endl;
+            cout << "1 - Individual" << endl;
+            cout << "2 - Partnership" << endl;
+            cout << "3 - Trust" << endl;
+            cout << "4 - Company" << endl;
+        }
+        if (Investor_Type == "1")
+        {
+            Account_Number = Create_Individual();
+        }
+        else if (Investor_Type == "2")
+        {
+            Account_Number = Create_Partnership();
+        }
+        else if (Investor_Type == "3") 
+        {
+            Account_Number = Create_Trust();
+        }
+        else
+        {
+            Account_Number = Create_Company();
+        } 
+        
+    }
+    return Account_Number;
 }
 
 void Console::Log_Out()
@@ -88,4 +185,229 @@ void Console::Bye_Message()
     cout << "| |              | || |              | || |              | |" << endl;
     cout << "| '--------------' || '--------------' || '--------------' |" << endl;
     cout << "'----------------'  '----------------'  '----------------'  " << endl;
+}
+
+int Console::Create_Broker()
+{
+    int Given_ID;
+    string Given_Password;
+    int Commission;
+    string Recommendations[3];
+    int Client_ID[3];
+    Given_ID = Get_ID();
+    cout << "Please provide password: ";
+    cin >> Given_Password;
+    cout << "Please provide fee (in dollars): ";
+    cin >> Commission;
+    for(int i=0;i<3;i++)
+    {
+        cout << "Please provide your stock recommendation number " << i+1 << ": ";
+        cin >> Recommendations[i];
+    }
+    for(int j=0;j<3;j++)
+    {
+        cout << "Please provide the ID of client number " << j+1 << " (Or 0 if you dont have enough clients for quota of 3): ";
+        cin >> Client_ID[j];
+        while(!Duplicate_ID(Client_ID[j]) && Client_ID[j] != 0)
+        {
+            cout << "You entered a non-existant ID!" << endl;
+            cout << "Please try again and enter the ID of client number " << j+1 << " (Or 0 if you dont have enough clients for quota of 3): ";
+            cin >> Client_ID[j];
+        }
+    }
+    fstream Accounts;
+    Accounts.open("Accounts.csv", fstream::app);
+    Accounts << Given_ID << "," << Given_Password << "," << "B" << "," << Commission << "," << Recommendations[0] 
+    << "," << Recommendations [1] << "," << Recommendations [2] << "," << Client_ID[0] << "," << Client_ID[1] 
+    << "," << Client_ID[2] << ",,,\n";
+    Accounts.close();
+    return Given_ID;
+}
+
+int Console::Create_Individual()
+{
+    system("Clear");
+    int Given_ID;
+    string Given_Password;
+    string Individual_First_Name;
+    string Individual_Last_Name;
+    Given_ID = Get_ID();
+    cout << "Please provide password: ";
+    cin >> Given_Password;
+    cout << "Please provide your first name as you would like it to appear on your portfolio statement: ";
+    cin >> Individual_First_Name;
+    cout << "Please provide your last name as you would like it to appear on your portfolio statement: ";
+    cin >> Individual_Last_Name;
+    fstream Accounts;
+    Accounts.open("Accounts.csv", fstream::app);
+    Accounts << Given_ID << "," << Given_Password << "," << "I" << "," << Individual_First_Name << "," << Individual_Last_Name << ",,,\n";
+    Accounts.close();
+    return Given_ID;
+}
+int Console::Create_Partnership()
+{
+    system("Clear");
+    int Given_ID;
+    string Given_Password;
+    int Partner_Number;
+    Given_ID = Get_ID();
+    cout << "Please provide password: ";
+    cin >> Given_Password;
+    cout << "How many partners are there? ";
+    cin >> Partner_Number;
+    string Partners_First_Names[Partner_Number];
+    string Partners_Last_Names[Partner_Number];
+    for(int i=0;i<Partner_Number;i++)
+    {
+        cout << "Please provide the first name for partner number " << i+1 << " as you would like it to appear on your portfolio statement: ";
+        cin >> Partners_First_Names[i];
+        cout << "Please provide the last name for partner number " << i+1 << " as you would like it to appear on your portfolio statement: ";
+        cin >> Partners_Last_Names[i];
+    }
+    fstream Accounts;
+    Accounts.open("Accounts.csv", fstream::app);
+    Accounts << Given_ID << "," << Given_Password << "," << "P" << "," << Partner_Number;
+    for(int i=0;i<Partner_Number;i++)
+    {
+        Accounts << "," << Partners_First_Names[i] << "," << Partners_Last_Names[i];
+    }
+    Accounts << ",,,\n";
+    Accounts.close();
+    return Given_ID;
+}
+
+int Console::Create_Trust()
+{
+    system("Clear");
+    int Given_ID;
+    string Given_Password;
+    int Trustee_Number;
+    int Beneficiary_Number;
+    Given_ID = Get_ID();
+    cout << "Please provide password: ";
+    cin >> Given_Password;
+    cout << "How many beneficiaries are there? ";
+    cin >> Beneficiary_Number;
+    string Beneficiary_First_Names[Beneficiary_Number];
+    string Beneficiary_Last_Names[Beneficiary_Number];
+    for(int i=0;i<Beneficiary_Number;i++)
+    {
+        cout << "Please provide the first name for beneificary number " << i+1 << " as you would like it to appear on your portfolio statement: ";
+        cin >> Beneficiary_First_Names[i];
+        cout << "Please provide the last name for beneificary number " << i+1 << " as you would like it to appear on your portfolio statement: ";
+        cin >> Beneficiary_Last_Names[i];
+    }
+    cout << "How many trustees are there? ";
+    cin >> Trustee_Number;
+    string Trustee_First_Names[Beneficiary_Number];
+    string Trustee_Last_Names[Beneficiary_Number];
+    for(int i=0;i<Trustee_Number;i++)
+    {
+        cout << "Please provide the first name for trustee number " << i+1 << " as you would like it to appear on your portfolio statement: ";
+        cin >> Trustee_First_Names[i];
+        cout << "Please provide the last name for trustee number " << i+1 << " as you would like it to appear on your portfolio statement: ";
+        cin >> Trustee_Last_Names[i];
+    }
+    fstream Accounts;
+    Accounts.open("Accounts.csv", fstream::app);
+    Accounts << Given_ID << "," << Given_Password << "," << "T" << "," << Beneficiary_Number;
+    for(int i=0;i<Beneficiary_Number;i++)
+    {
+        Accounts << "," << Beneficiary_First_Names[i] << "," << Beneficiary_Last_Names[i];
+    }
+    Accounts << ", " << Trustee_Number;
+    for(int i=0;i<Trustee_Number;i++)
+    {
+        Accounts << "," << Trustee_First_Names[i] << "," << Trustee_Last_Names[i];
+    }
+    Accounts << ",,,\n";
+    Accounts.close();
+
+    return Given_ID;
+}
+
+int Console::Create_Company()
+{
+    system("Clear");
+    int Given_ID;
+    string Given_Password;
+    int Director_Number;
+    string Registered_Name;
+    Given_ID = Get_ID();
+    cout << "Please provide password: ";
+    cin >> Given_Password;
+    cout << "Please enter your registered name: ";
+    cin.ignore(1000, '\n');
+    getline(cin, Registered_Name);
+    cout << "How many directors are there? ";
+    cin >> Director_Number;
+    string Director_First_Names[Director_Number];
+    string Director_Last_Names[Director_Number];
+    for(int i=0;i<Director_Number;i++)
+    {
+        cout << "Please provide the first name for director number " << i+1 << " as you would like it to appear on your portfolio statement: ";
+        cin >> Director_First_Names[i];
+        cout << "Please provide the last name for director number " << i+1 << " as you would like it to appear on your portfolio statement: ";
+        cin >> Director_Last_Names[i];
+    }
+    fstream Accounts;
+    Accounts.open("Accounts.csv", fstream::app);
+    Accounts << Given_ID << "," << Given_Password << "," << "C" << "," << Registered_Name << "," << Director_Number;
+    for(int i=0;i<Director_Number;i++)
+    {
+        Accounts << "," << Director_First_Names[i] << "," << Director_Last_Names[i];
+    }
+    Accounts << ",,,\n";
+    Accounts.close();
+
+    return Given_ID;
+}
+
+void Console::Loading()
+{
+    this_thread::sleep_for(chrono::seconds(2));
+    system("Clear"); // Clears terminal
+    cout << "Loading." << endl;
+    this_thread::sleep_for(chrono::seconds(1));
+    system("Clear"); // Clears terminal
+    cout << "Loading.." << endl;
+    this_thread::sleep_for(chrono::seconds(1));
+    system("Clear"); // Clears terminal
+    cout << "Loading..." << endl;
+    this_thread::sleep_for(chrono::seconds(1));
+    system("Clear"); // Clears terminal
+}
+
+int Console::Get_ID()
+{
+    int ID;
+    cout << "Please provide your desired ID (Integers Only): ";
+    cin >> ID;
+    while(Duplicate_ID(ID))
+    {
+        cout << "You entered an already Existing ID: Please provide your desired ID (Integers Only): ";
+        cin >> ID;
+    }
+    return ID;
+}
+
+bool Console::Duplicate_ID(int ID)
+{
+    ifstream Accounts;
+    Accounts.open("Accounts.csv");
+    string line;
+    int Temp_ID;
+    string myID;
+    while(getline(Accounts, line))
+    {
+        stringstream ss(line);
+        getline(ss,myID,',');
+        Temp_ID = stoi(myID);
+        if(Temp_ID == ID)
+        {
+          return true;
+        }
+    }
+    Accounts.close();  
+    return false; 
 }
